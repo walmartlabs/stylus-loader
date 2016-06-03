@@ -161,3 +161,4 @@ In lieu of a formal styleguide, take care to maintain the existing coding style.
 
 ## Release History
 * 2.1.0 - Initial release tracking `stylus-loader@2.1.0`, with fixed relative imports.
+* Find pre-fork releases of `stylus-loader` at https://github.com/shama/stylus-loader/releases
