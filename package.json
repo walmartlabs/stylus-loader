@@ -1,7 +1,7 @@
 {
   "name": "stylus-relative-loader",
   "version": "2.1.1",
-  "description": "Stylus loader for webpack, with fixed relative imports",
+  "description": "Stylus loader for webpack, with fixed imports",
   "main": "index.js",
   "files": [
     "index.js",
