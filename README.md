@@ -66,11 +66,11 @@ branches or with `$variable` interpolation in the path. `stylus-loader` does not
 support these and sometimes emits confusing error messages as a result.
 
 This is possible because there is no static analysis step to find imports like
-there is in `stylus-loader`. The Stylus rendered is invoked, and when any
-"missing" imports are encountered, they are resolved before retrying from the
-beginning. This sounds like it would be slow, but in practice it's not
+there is in `stylus-loader`. The Stylus renderer is invoked, and when any
+"missing" imports are encountered, they are resolved before trying again from
+the beginning. This sounds like it would be slow, but in practice it's not
 noticeable for the applications we've tested, and has the benefit of
-correctness.
+correctness. Be careful if you have Stylus plugins with expensive side-effects.
 
 ### Status of this fork
 

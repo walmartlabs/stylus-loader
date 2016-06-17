@@ -1,18 +1,18 @@
+'use strict';
 var loaderUtils = require('loader-utils');
 var stylus = require('stylus');
 var path = require('path');
-var fs = require('fs');
 var whenNodefn = require('when/node/function');
 
 var CachedPathEvaluator = require('./lib/evaluator');
 var UnresolvedImport = require('./lib/unresolved-import');
 var resolver = require('./lib/resolver');
 
-var globalImportsCaches = {};
-
 module.exports = function(source) {
   var self = this;
-  this.cacheable && this.cacheable();
+  if (this.cacheable) {
+    this.cacheable();
+  }
   var done = this.async();
   var options = loaderUtils.parseQuery(this.query);
   options.dest = options.dest || '';
@@ -40,8 +40,7 @@ module.exports = function(source) {
   if (options.sourceMap != null) {
     options.sourcemap = options.sourceMap;
     delete options.sourceMap;
-  }
-  else if (this.sourceMap) {
+  } else if (this.sourceMap) {
     options.sourcemap = { comment: false };
   }
 
@@ -49,7 +48,7 @@ module.exports = function(source) {
   var paths = [path.dirname(options.filename)];
 
   function needsArray(value) {
-    return (Array.isArray(value)) ? value : [value];
+    return Array.isArray(value) ? value : [value];
   }
 
   if (options.paths && !Array.isArray(options.paths)) {
@@ -76,8 +75,8 @@ module.exports = function(source) {
         styl.define(defineName, value[defineName]);
       }
     } else if (key === 'include') {
-      needsArray(value).forEach(function(path) {
-        styl.include(path);
+      needsArray(value).forEach(function(includePath) {
+        styl.include(includePath);
       });
     } else if (key === 'import') {
       needsArray(value).forEach(function(file) {
@@ -161,7 +160,7 @@ module.exports = function(source) {
       var resolveRequest = resolve(context, request);
 
       if (indexRequest) {
-        resolveRequest = resolveRequest.catch(function(err) {
+        resolveRequest = resolveRequest.catch(function() {
           request = indexRequest;
           return resolve(context, request);
         });
