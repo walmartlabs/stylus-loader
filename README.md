@@ -1,18 +1,20 @@
 # stylus-relative-loader
 A [stylus](http://learnboost.github.io/stylus/) loader for [webpack](https://github.com/webpack/webpack),
-with fixed relative imports.
+with fixed imports.
 
 [![NPM version](https://badge.fury.io/js/stylus-relative-loader.svg)](https://badge.fury.io/js/stylus-relative-loader)
 
 ## vs. stylus-loader
+
+### Relative imports
 
 With `stylus-loader` (which inherits a lot of behavior from Stylus itself),
 relative path imports like `./variables` and `./color`, don't necessarily
 resolve to the path relative to the file in which the import is found. In fact,
 they have the same meaning as just importing `variables` and `color`. This means
 the paths are resolved using the Stylus "context" – in effect, you could get the
-file at the requested relative path, a file in an ancestor directory, a node
-module, or a file within another module that happens to have the same name.
+file at the requested relative path, a file in some ancestor directory, a node
+module, or a file that happens to have the same name within another module.
 
 For example:
 
@@ -56,6 +58,19 @@ some styles/variables/mixins might go missing!
 `stylus-relative-loader` fixes this issue by patching relative imports to all
 resolve as if they were full absolute paths. That means you'd get all of
 `color.styl`, `a/color.styl`, and `b/color.styl` above.
+
+### Dynamic imports
+
+`stylus-relative-loader` supports dynamic imports, such as those in conditional
+branches or with `$variable` interpolation in the path. `stylus-loader` does not
+support these and sometimes emits confusing error messages as a result.
+
+This is possible because there is no static analysis step to find imports like
+there is in `stylus-loader`. The Stylus renderer is invoked, and when any
+"missing" imports are encountered, they are resolved before trying again from
+the beginning. This sounds like it would be slow, but in practice it's not
+noticeable for the applications we've tested, and has the benefit of
+correctness. Be careful if you have Stylus plugins with expensive side-effects.
 
 ### Status of this fork
 

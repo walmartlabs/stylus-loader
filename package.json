@@ -1,13 +1,14 @@
 {
   "name": "stylus-relative-loader",
   "version": "2.1.1",
-  "description": "Stylus loader for webpack, with fixed relative imports",
+  "description": "Stylus loader for webpack, with fixed imports",
   "main": "index.js",
   "files": [
     "index.js",
     "lib/"
   ],
   "scripts": {
+    "lint": "eslint *.js lib",
     "test": "testem ci",
     "test-dev": "testem -l firefox",
     "test-one": "testem ci -l firefox",
@@ -29,6 +30,9 @@
   "devDependencies": {
     "benchmark": "^1.0.0",
     "css-loader": "^0.14.0",
+    "eslint": "^1.10.3",
+    "eslint-config-defaults": "^9.0.0",
+    "eslint-plugin-filenames": "^0.2.0",
     "mocha": "~2.1.0",
     "mocha-loader": "~0.7.1",
     "nib": "^1.0.4",

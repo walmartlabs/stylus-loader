@@ -1,30 +1,37 @@
+'use strict';
 var loaderUtils = require('loader-utils');
 var stylus = require('stylus');
 var path = require('path');
-var fs = require('fs');
-var when = require('when');
 var whenNodefn = require('when/node/function');
 
 var CachedPathEvaluator = require('./lib/evaluator');
-var PathCache = require('./lib/pathcache');
+var UnresolvedImport = require('./lib/unresolved-import');
 var resolver = require('./lib/resolver');
-
-var globalImportsCaches = {};
 
 module.exports = function(source) {
   var self = this;
-  this.cacheable && this.cacheable();
+  if (this.cacheable) {
+    this.cacheable();
+  }
   var done = this.async();
   var options = loaderUtils.parseQuery(this.query);
   options.dest = options.dest || '';
   options.filename = options.filename || this.resourcePath;
   options.Evaluator = CachedPathEvaluator;
+  // Keep track of webpack-resolved imports.
+  options.resolvedImports = {};
+
+  var dependencies = {};
+  options.addDependencies = function(filenames) {
+    filenames.forEach(function(filename) {
+      dependencies[filename] = true;
+    });
+  };
 
   var configKey = options.config || 'stylus';
   var stylusOptions = this.options[configKey] || {};
-  // Instead of assigning to options, we run them manually later so their side effects apply earlier for
-  // resolving paths.
-  var use = options.use || stylusOptions.use || [];
+
+  options.use = options.use || stylusOptions.use || [];
   options.import = options.import || stylusOptions.import || [];
   options.include = options.include || stylusOptions.include || [];
   options.set = options.set || stylusOptions.set || {};
@@ -33,8 +40,7 @@ module.exports = function(source) {
   if (options.sourceMap != null) {
     options.sourcemap = options.sourceMap;
     delete options.sourceMap;
-  }
-  else if (this.sourceMap) {
+  } else if (this.sourceMap) {
     options.sourcemap = { comment: false };
   }
 
@@ -42,7 +48,7 @@ module.exports = function(source) {
   var paths = [path.dirname(options.filename)];
 
   function needsArray(value) {
-    return (Array.isArray(value)) ? value : [value];
+    return Array.isArray(value) ? value : [value];
   }
 
   if (options.paths && !Array.isArray(options.paths)) {
@@ -50,7 +56,6 @@ module.exports = function(source) {
     options.paths = [options.paths];
   }
 
-  var manualImports = [];
   Object.keys(options).forEach(function(key) {
     var value = options[key];
     if (key === 'use') {
@@ -70,10 +75,12 @@ module.exports = function(source) {
         styl.define(defineName, value[defineName]);
       }
     } else if (key === 'include') {
-      needsArray(value).forEach(styl.include);
+      needsArray(value).forEach(function(includePath) {
+        styl.include(includePath);
+      });
     } else if (key === 'import') {
-      needsArray(value).forEach(function(stylusModule) {
-        manualImports.push(stylusModule);
+      needsArray(value).forEach(function(file) {
+        styl.import(file);
       });
     } else {
       styl.set(key, value);
@@ -84,6 +91,9 @@ module.exports = function(source) {
     }
   });
 
+  // TODO: This code could all still be perfectly valid with the new approach,
+  // look into it. -BB
+  /*
   var shouldCacheImports = stylusOptions.importsCache !== false;
 
   var importsCache;
@@ -106,67 +116,70 @@ module.exports = function(source) {
   } catch (error) {
     readFile = fs.readFile;
   }
+  */
 
-  var boundResolvers = PathCache.resolvers(options, this.resolve);
-  var pathCacheHelpers = {
-    resolvers: boundResolvers,
-    readFile: readFile,
-  };
+  // `styl.render`, promisified.
+  var renderStylus = whenNodefn.lift(styl.render).bind(styl);
+  // webpack's `resolve`, promisified.
+  var resolve = whenNodefn.lift(self.resolve).bind(self);
 
-  // Use plugins here so that resolve related side effects can be used while we resolve imports.
-  use.forEach(styl.use, styl);
+  function tryRender() {
+    return renderStylus().then(function(css) {
+      // TODO: Figure out how to add back sourcemap. -BB
+      /*
+      if (styl.sourcemap) {
+        styl.sourcemap.sourcesContent = styl.sourcemap.sources.map(function (file) {
+          return importPathCache.sources[path.resolve(file)]
+        });
+      }
+      */
+      return {
+        css: css,
+        sourcemap: styl.sourcemap
+      };
+    }).catch(function(err) {
+      if (!(err instanceof UnresolvedImport)) {
+        throw err;
+      }
 
-  when
-    // Resolve manual imports like @import files.
-    .reduce(manualImports, function resolveManualImports(carry, filename) {
-      return PathCache.resolvers
-        .reduce(boundResolvers, path.dirname(options.filename), filename)
-        .then(function(paths) { return carry.concat(paths); });
-    }, [])
-    // Resolve dependencies of
-    .then(function(paths) {
-      paths.forEach(styl.import.bind(styl));
-      paths.forEach(self.addDependency);
+      var context = err.importContext;
+      var originalRequest = err.importRequest;
+      var request = originalRequest;
+      var indexRequest;
 
-      var readFile = whenNodefn.lift(pathCacheHelpers.readFile);
-      return when.reduce(paths, function(cache, filepath) {
-        return readFile(filepath)
-          .then(function(source) {
-            return PathCache.createFromFile(
-              pathCacheHelpers, cache, source.toString(), filepath
-            );
-          });
-      }, {
-        contexts: {},
-        sources: {},
-        imports: importsCache,
+      // Check if it's a CSS import.
+      var literal = /\.css(?:"|$)/.test(request);
+
+      // If it's not CSS and it doesn't end in .styl, try adding '.styl'
+      // and '/index.styl'
+      if (!literal && !/\.styl$/i.test(request)) {
+        request += '.styl';
+        indexRequest = path.join(originalRequest, 'index.styl');
+      }
+
+      var resolveRequest = resolve(context, request);
+
+      if (indexRequest) {
+        resolveRequest = resolveRequest.catch(function() {
+          request = indexRequest;
+          return resolve(context, request);
+        });
+      }
+
+      return resolveRequest.then(function(result) {
+        var contextImports = options.resolvedImports[context] || {};
+        contextImports[request] = result;
+        contextImports[originalRequest] = result;
+        options.resolvedImports[context] = contextImports;
+        return tryRender();
       });
-    })
-    .then(function(cache) {
-      return PathCache
-        .createFromFile(pathCacheHelpers, cache, source, options.filename);
-    })
-    .then(function(importPathCache) {
-      // CachedPathEvaluator will use this PathCache to find its dependencies.
-      options.cache = importPathCache;
-      importPathCache.allDeps().forEach(function(f) {
-        self.addDependency(path.normalize(f));
-      });
+    });
+  }
 
-      // var paths = importPathCache.origins;
-
-      styl.render(function(err, css) {
-        if (err) {
-          done(err);
-        } else {
-          if (styl.sourcemap) {
-            styl.sourcemap.sourcesContent = styl.sourcemap.sources.map(function (file) {
-              return importPathCache.sources[path.resolve(file)]
-            });
-          }
-          done(null, css, styl.sourcemap);
-        }
-      });
-    })
-    .catch(done);
+  tryRender().then(function(result) {
+    Object.keys(dependencies).forEach(function(filename) {
+      self.addDependency(filename);
+    });
+    done(null, result.css, result.sourcemap);
+  }).catch(done);
 };
