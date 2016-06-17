@@ -175,6 +175,7 @@ open http://localhost:8080/test/
 In lieu of a formal styleguide, take care to maintain the existing coding style.
 
 ## Release History
+* 3.0.0 - New import resolver supporting dynamic import paths.
 * 2.1.1 - Sync with `stylus-loader` 2.1.1:
   > Support Node 6 (@yyx990803), Test in webpack 1 and 2 (@phyllisstein)
 * 2.1.0 - Initial release tracking `stylus-loader@2.1.0`, with fixed relative imports.
