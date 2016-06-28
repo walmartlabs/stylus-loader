@@ -31,7 +31,11 @@ module.exports = function(source) {
   var configKey = options.config || 'stylus';
   var stylusOptions = this.options[configKey] || {};
 
-  options.use = options.use || stylusOptions.use || [];
+  // Handle `use` ahead of time for Stylus, otherwise it will try to call
+  // each plugin on every render attempt.
+  var use = needsArray(options.use || stylusOptions.use || []);
+
+  options.use = [];
   options.import = options.import || stylusOptions.import || [];
   options.include = options.include || stylusOptions.include || [];
   options.set = options.set || stylusOptions.set || {};
@@ -56,17 +60,17 @@ module.exports = function(source) {
     options.paths = [options.paths];
   }
 
+  needsArray(use).forEach(function(plugin) {
+    if (typeof plugin === 'function') {
+      styl.use(plugin);
+    } else {
+      throw new Error('Plugin should be a function');
+    }
+  });
+
   Object.keys(options).forEach(function(key) {
     var value = options[key];
-    if (key === 'use') {
-      needsArray(value).forEach(function(plugin) {
-        if (typeof plugin === 'function') {
-          styl.use(plugin);
-        } else {
-          throw new Error('Plugin should be a function');
-        }
-      });
-    } else if (key === 'set') {
+    if (key === 'set') {
       for (var name in value) {
         styl.set(name, value[name]);
       }
