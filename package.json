@@ -39,7 +39,7 @@
     "nib": "^1.0.4",
     "node-libs-browser": "^0.5.2",
     "raw-loader": "~0.5.1",
-    "should": "~4.6.1",
+    "should": "^9.0.2",
     "style-loader": "^0.12.2",
     "stylus": "^0.54.5",
     "testem": "^0.8.3",
