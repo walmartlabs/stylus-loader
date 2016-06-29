@@ -172,4 +172,10 @@ describe("basic", function() {
     css.should.match(/\.b-color/);
     css.should.match(/\.c-color/);
   });
+  it("supports dynamic import paths", function() {
+    var css = require("!raw-loader!..!./fixtures/dynamic");
+    (typeof css).should.be.eql("string");
+    css.should.not.match(/\.a-color/);
+    css.should.match(/\.b-color/);
+  });
 });

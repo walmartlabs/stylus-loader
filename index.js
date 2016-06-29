@@ -5,8 +5,12 @@ var path = require('path');
 var whenNodefn = require('when/node/function');
 
 var CachedPathEvaluator = require('./lib/evaluator');
-var UnresolvedImport = require('./lib/unresolved-import');
+var ImportCache = require('./lib/import-cache');
 var resolver = require('./lib/resolver');
+
+function needsArray(value) {
+  return Array.isArray(value) ? value : [value];
+}
 
 module.exports = function(source) {
   var self = this;
@@ -18,15 +22,9 @@ module.exports = function(source) {
   options.dest = options.dest || '';
   options.filename = options.filename || this.resourcePath;
   options.Evaluator = CachedPathEvaluator;
-  // Keep track of webpack-resolved imports.
-  options.resolvedImports = {};
 
-  var dependencies = {};
-  options.addDependencies = function(filenames) {
-    filenames.forEach(function(filename) {
-      dependencies[filename] = true;
-    });
-  };
+  // Attach `importCache` to `options` so that the `Evaluator` can access it.
+  var importCache = options.importCache = new ImportCache(this);
 
   var configKey = options.config || 'stylus';
   var stylusOptions = this.options[configKey] || {};
@@ -50,10 +48,6 @@ module.exports = function(source) {
 
   var styl = stylus(source, options);
   var paths = [path.dirname(options.filename)];
-
-  function needsArray(value) {
-    return Array.isArray(value) ? value : [value];
-  }
 
   if (options.paths && !Array.isArray(options.paths)) {
     paths = paths.concat(options.paths);
@@ -95,94 +89,22 @@ module.exports = function(source) {
     }
   });
 
-  // TODO: This code could all still be perfectly valid with the new approach,
-  // look into it. -BB
-  /*
-  var shouldCacheImports = stylusOptions.importsCache !== false;
-
-  var importsCache;
-  if (stylusOptions.importsCache !== false) {
-    if (typeof stylusOptions.importsCache === 'object') {
-      importsCache = stylusOptions.importsCache;
-    } else {
-      if(!globalImportsCaches[configKey]) globalImportsCaches[configKey] = {};
-      importsCache = globalImportsCaches[configKey];
-    }
-  }
-
-  // Use input file system's readFile if available. The normal webpack input
-  // file system is cached with entries purged when they are detected to be
-  // changed on disk by the watcher.
-  var readFile;
-  try {
-    var inputFileSystem = this._compiler.inputFileSystem;
-    readFile = inputFileSystem.readFile.bind(inputFileSystem);
-  } catch (error) {
-    readFile = fs.readFile;
-  }
-  */
-
   // `styl.render`, promisified.
   var renderStylus = whenNodefn.lift(styl.render).bind(styl);
-  // webpack's `resolve`, promisified.
-  var resolve = whenNodefn.lift(self.resolve).bind(self);
 
   function tryRender() {
     return renderStylus().then(function(css) {
-      // TODO: Figure out how to add back sourcemap. -BB
-      /*
-      if (styl.sourcemap) {
-        styl.sourcemap.sourcesContent = styl.sourcemap.sources.map(function (file) {
-          return importPathCache.sources[path.resolve(file)]
-        });
-      }
-      */
       return {
         css: css,
         sourcemap: styl.sourcemap
       };
-    }).catch(function(err) {
-      if (!(err instanceof UnresolvedImport)) {
-        throw err;
-      }
-
-      var context = err.importContext;
-      var originalRequest = err.importRequest;
-      var request = originalRequest;
-      var indexRequest;
-
-      // Check if it's a CSS import.
-      var literal = /\.css(?:"|$)/.test(request);
-
-      // If it's not CSS and it doesn't end in .styl, try adding '.styl'
-      // and '/index.styl'
-      if (!literal && !/\.styl$/i.test(request)) {
-        request += '.styl';
-        indexRequest = path.join(originalRequest, 'index.styl');
-      }
-
-      var resolveRequest = resolve(context, request);
-
-      if (indexRequest) {
-        resolveRequest = resolveRequest.catch(function() {
-          request = indexRequest;
-          return resolve(context, request);
-        });
-      }
-
-      return resolveRequest.then(function(result) {
-        var contextImports = options.resolvedImports[context] || {};
-        contextImports[request] = result;
-        contextImports[originalRequest] = result;
-        options.resolvedImports[context] = contextImports;
-        return tryRender();
-      });
-    });
+    }).catch(importCache.createUnresolvedImportHandler(tryRender));
   }
 
   tryRender().then(function(result) {
-    Object.keys(dependencies).forEach(function(filename) {
-      self.addDependency(filename);
+    // Tell `webpack` about all the dependencies found during render.
+    importCache.getDependencies().forEach(function(file) {
+      self.addDependency(file);
     });
     done(null, result.css, result.sourcemap);
   }).catch(done);
