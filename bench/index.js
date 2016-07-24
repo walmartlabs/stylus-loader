@@ -7,8 +7,8 @@ global.fs = require('fs');
 
 var Benchmark = require('benchmark');
 var webpack = require('webpack');
-var MemoryFileSystem = require('webpack-dev-server/node_modules/webpack-dev-middleware/node_modules/memory-fs');
-var when = require('when');
+var MemoryFileSystem = require('memory-fs');
+var Promise = require('bluebird');
 
 var importWebpackConfig = require('./fixtures/imports/webpack.config');
 
@@ -16,7 +16,7 @@ function resolveOnComplete(fn) {
   return function() {
     var _this = this;
     var args = arguments;
-    return when.promise(function(resolve) {
+    return new Promise(function(resolve) {
       var result = fn.apply(_this, args);
       result.on('complete', function() {
         resolve();
@@ -25,7 +25,7 @@ function resolveOnComplete(fn) {
   };
 }
 
-when
+Promise
   .resolve()
   .then(resolveOnComplete(function() {
     var suite = new Benchmark.Suite;

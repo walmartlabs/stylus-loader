@@ -2,7 +2,7 @@
 var loaderUtils = require('loader-utils');
 var stylus = require('stylus');
 var path = require('path');
-var whenNodefn = require('when/node/function');
+var Promise = require('bluebird');
 
 var CachedPathEvaluator = require('./lib/evaluator');
 var ImportCache = require('./lib/import-cache');
@@ -90,7 +90,7 @@ module.exports = function(source) {
   });
 
   // `styl.render`, promisified.
-  var renderStylus = whenNodefn.lift(styl.render).bind(styl);
+  var renderStylus = Promise.promisify(styl.render, { context: styl });
 
   function tryRender() {
     return renderStylus().then(function(css) {
@@ -107,9 +107,7 @@ module.exports = function(source) {
   // have a bunch of imports in the cache.
   importCache.enqueueVisit(options.filename, source);
 
-  importCache.flushVisitQueue().then(function() {
-    return importCache.flushImportQueue();
-  }).then(function() {
+  importCache.flushQueues().then(function() {
     return tryRender().then(function(result) {
       // Tell `webpack` about all the dependencies found during render.
       importCache.getDependencies().forEach(function(file) {
