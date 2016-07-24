@@ -1,6 +1,6 @@
 {
   "name": "stylus-relative-loader",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "Stylus loader for webpack, with fixed imports",
   "main": "index.js",
   "files": [
@@ -26,25 +26,25 @@
   },
   "dependencies": {
     "loader-utils": "^0.2.9",
-    "when": "~3.6.x"
+    "when": "^3.7.7"
   },
   "devDependencies": {
-    "benchmark": "^1.0.0",
-    "css-loader": "^0.14.0",
+    "benchmark": "^2.1.1",
+    "css-loader": "^0.23.1",
     "eslint": "^1.10.3",
     "eslint-config-defaults": "^9.0.0",
     "eslint-plugin-filenames": "^0.2.0",
-    "mocha": "~2.1.0",
-    "mocha-loader": "~0.7.1",
-    "nib": "^1.0.4",
-    "node-libs-browser": "^0.5.2",
-    "raw-loader": "~0.5.1",
-    "should": "^9.0.2",
-    "style-loader": "^0.12.2",
+    "mocha": "^2.5.3",
+    "mocha-loader": "^0.7.1",
+    "nib": "^1.1.0",
+    "node-libs-browser": "^1.0.0",
+    "raw-loader": "^0.5.1",
+    "should": "^10.0.0",
+    "style-loader": "^0.13.1",
     "stylus": "^0.54.5",
-    "testem": "^0.8.3",
-    "webpack": "^1.9.8",
-    "webpack-dev-server": "~1.7.0"
+    "testem": "^1.10.1",
+    "webpack": "^1.13.1",
+    "webpack-dev-server": "^1.14.1"
   },
   "peerDependencies": {
     "stylus": "^0.54.5"
