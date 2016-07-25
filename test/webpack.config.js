@@ -20,6 +20,9 @@ if (process.env.WEBPACK_VERSION === '2.1.0-beta.7') {
   module.exports = {
     context: __dirname,
     entry: 'mocha-loader!./all.js',
+    node: {
+      fs: "empty"
+    },
     resolve: {
       enforceExtensions: false,
       extensions: [
@@ -44,6 +47,9 @@ if (process.env.WEBPACK_VERSION === '2.1.0-beta.7') {
   module.exports = {
     context: __dirname,
     entry: "mocha-loader!./all.js",
+    node: {
+      fs: "empty"
+    },
     resolve: {
       extensions: ["", ".js", ".css", ".styl"]
     },

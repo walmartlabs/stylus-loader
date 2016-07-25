@@ -65,11 +65,13 @@ resolve as if they were full absolute paths. That means you'd get all of
 branches or with `$variable` interpolation in the path. `stylus-loader` does not
 support these and sometimes emits confusing error messages as a result.
 
-This is possible because there is no static analysis step to find imports like
-there is in `stylus-loader`. The Stylus renderer is invoked, and when any
-"missing" imports are encountered, they are resolved before trying again from
-the beginning. This sounds like it would be slow, but in practice it's not
-noticeable for the applications we've tested, and has the benefit of
+This is possible because the static import analysis step in
+`stylus-relative-loader` exists purely to increase performance, and is not a
+requirement for import resolution like it is in `stylus-loader`. Our general
+strategy is to invoke the Stylus renderer, and when any "unresolved" imports are
+encountered, we stop rendering, resolved any queued up imports, then try
+rendering again from the beginning. This makes `stylus-relative-loader` slower
+than `stylus-loader` if you have many dynamic imports, but has the benefit of
 correctness. Be careful if you have Stylus plugins with expensive side-effects.
 
 ### Status of this fork

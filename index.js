@@ -2,7 +2,7 @@
 var loaderUtils = require('loader-utils');
 var stylus = require('stylus');
 var path = require('path');
-var whenNodefn = require('when/node/function');
+var Promise = require('bluebird');
 
 var CachedPathEvaluator = require('./lib/evaluator');
 var ImportCache = require('./lib/import-cache');
@@ -24,7 +24,7 @@ module.exports = function(source) {
   options.Evaluator = CachedPathEvaluator;
 
   // Attach `importCache` to `options` so that the `Evaluator` can access it.
-  var importCache = options.importCache = new ImportCache(this);
+  var importCache = options.importCache = new ImportCache(this, options);
 
   var configKey = options.config || 'stylus';
   var stylusOptions = this.options[configKey] || {};
@@ -90,7 +90,7 @@ module.exports = function(source) {
   });
 
   // `styl.render`, promisified.
-  var renderStylus = whenNodefn.lift(styl.render).bind(styl);
+  var renderStylus = Promise.promisify(styl.render, { context: styl });
 
   function tryRender() {
     return renderStylus().then(function(css) {
@@ -98,14 +98,22 @@ module.exports = function(source) {
         css: css,
         sourcemap: styl.sourcemap
       };
-    }).catch(importCache.createUnresolvedImportHandler(tryRender));
+    }).catch(function(err) {
+      return importCache.handleUnresolvedImport(err).then(tryRender);
+    });
   }
 
-  tryRender().then(function(result) {
-    // Tell `webpack` about all the dependencies found during render.
-    importCache.getDependencies().forEach(function(file) {
-      self.addDependency(file);
+  // Visit this base file before even attempting to render, so we can already
+  // have a bunch of imports in the cache.
+  importCache.enqueueVisit(options.filename, source);
+
+  importCache.flushQueues().then(function() {
+    return tryRender().then(function(result) {
+      // Tell `webpack` about all the dependencies found during render.
+      importCache.getDependencies().forEach(function(file) {
+        self.addDependency(file);
+      });
+      done(null, result.css, result.sourcemap);
     });
-    done(null, result.css, result.sourcemap);
   }).catch(done);
 };
