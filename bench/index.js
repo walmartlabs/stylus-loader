@@ -8,7 +8,7 @@ global.fs = require('fs');
 var Benchmark = require('benchmark');
 var webpack = require('webpack');
 var MemoryFileSystem = require('memory-fs');
-var Promise = require('bluebird');
+var Promise = require('es6-promise').Promise;
 
 var importWebpackConfig = require('./fixtures/imports/webpack.config');
 
