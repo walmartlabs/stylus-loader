@@ -2,7 +2,7 @@
 var loaderUtils = require('loader-utils');
 var stylus = require('stylus');
 var path = require('path');
-var Promise = require('bluebird');
+var Promise = require('es6-promise').Promise;
 
 var CachedPathEvaluator = require('./lib/evaluator');
 var ImportCache = require('./lib/import-cache');
@@ -90,7 +90,13 @@ module.exports = function(source) {
   });
 
   // `styl.render`, promisified.
-  var renderStylus = Promise.promisify(styl.render, { context: styl });
+  var renderStylus = function() {
+    return new Promise(function(resolve, reject) {
+      styl.render(function(err, css) {
+        return err ? reject(err) : resolve(css);
+      });
+    });
+  };
 
   function tryRender() {
     return renderStylus().then(function(css) {

@@ -25,7 +25,7 @@
     "url": "https://github.com/walmartlabs/stylus-relative-loader/issues"
   },
   "dependencies": {
-    "bluebird": "^3.4.1",
+    "es6-promise": "^3.2.1",
     "loader-utils": "^0.2.9"
   },
   "devDependencies": {
