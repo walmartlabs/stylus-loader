@@ -25,6 +25,7 @@
     "url": "https://github.com/walmartlabs/stylus-relative-loader/issues"
   },
   "dependencies": {
+    "debug": "^2.2.0",
     "es6-promise": "^3.2.1",
     "loader-utils": "^0.2.9"
   },
