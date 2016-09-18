@@ -177,5 +177,6 @@ describe("basic", function() {
     (typeof css).should.be.eql("string");
     css.should.not.match(/\.a-color/);
     css.should.match(/\.b-color/);
+    css.should.match(/\.foo-bar/);
   });
 });
