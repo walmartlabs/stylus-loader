@@ -74,6 +74,43 @@ rendering again from the beginning. This makes `stylus-relative-loader` slower
 than `stylus-loader` if you have many dynamic imports, but has the benefit of
 correctness. Be careful if you have Stylus plugins with expensive side-effects.
 
+#### New `precacheImportVariables` query option
+
+If you are using the above dynamic import feature and have a lot of Stylus
+imports, it can balloon your build time due to the multiple render attempts
+that will be necessary.
+
+If you tend to use the same variable in a lot of dynamic imports, and there are
+only a few potential values, you can optimize dynamic import discovery by
+providing the `precacheImportVariables` option. Before rendering, while the
+Stylus import tree is being discovered (by `stylus-relative-loader`) and
+resolved (by webpack), these values will be used to discover more potential
+imports, eliminating the need for additional render attempts if the value at
+render time happens to match.
+
+Note that this option doesn't affect the output; the variables in your imports
+can still have any value at render time – but your build will potentially be
+much faster.
+
+```js
+{
+  precacheImportVariables: [
+    { $tenant: "foo" },
+    { $tenant: "bar" },
+    { $tenant: "baz" }
+  ]
+}
+```
+
+This behavior currently only works for `@import` and `@require` syntax using
+variables like so:
+
+```stylus
+@import $foo;
+@import "~my-style-lib/styl/" + $foo;
+@require "./styles/" + $foo + "/more/" + $bar;
+```
+
 ### Status of this fork
 
 There are no doubt people depending on the behavior described above, using it as

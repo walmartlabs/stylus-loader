@@ -1,6 +1,6 @@
 {
   "name": "stylus-relative-loader",
-  "version": "3.2.1",
+  "version": "3.3.0-beta.2",
   "description": "Stylus loader for webpack, with fixed imports",
   "main": "index.js",
   "files": [
@@ -25,6 +25,7 @@
     "url": "https://github.com/walmartlabs/stylus-relative-loader/issues"
   },
   "dependencies": {
+    "debug": "^2.2.0",
     "es6-promise": "^3.2.1",
     "loader-utils": "^0.2.9"
   },

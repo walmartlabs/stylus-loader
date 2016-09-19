@@ -8,6 +8,8 @@ var CachedPathEvaluator = require('./lib/evaluator');
 var ImportCache = require('./lib/import-cache');
 var resolver = require('./lib/resolver');
 
+var debug = require('debug')('stylus-relative-loader:index');
+
 function needsArray(value) {
   return Array.isArray(value) ? value : [value];
 }
@@ -98,13 +100,17 @@ module.exports = function(source) {
     });
   };
 
+  var attempt = 0;
+
   function tryRender() {
+    attempt += 1;
     return renderStylus().then(function(css) {
       return {
         css: css,
         sourcemap: styl.sourcemap
       };
     }).catch(function(err) {
+      debug('Error: %s', err);
       return importCache.handleUnresolvedImport(err).then(tryRender);
     });
   }
@@ -113,12 +119,15 @@ module.exports = function(source) {
   // have a bunch of imports in the cache.
   importCache.enqueueVisit(options.filename, source);
 
+  debug('Starting: %s', options.filename);
+
   importCache.flushQueues().then(function() {
     return tryRender().then(function(result) {
       // Tell `webpack` about all the dependencies found during render.
       importCache.getDependencies().forEach(function(file) {
         self.addDependency(file);
       });
+      debug('Render attempts: %s', attempt);
       done(null, result.css, result.sourcemap);
     });
   }).catch(done);
