@@ -3,6 +3,7 @@ var loaderUtils = require('loader-utils');
 var stylus = require('stylus');
 var path = require('path');
 var Promise = require('es6-promise').Promise;
+var util = require('util');
 
 var CachedPathEvaluator = require('./lib/evaluator');
 var ImportCache = require('./lib/import-cache');
@@ -21,9 +22,19 @@ module.exports = function(source) {
   }
   var done = this.async();
   var options = loaderUtils.parseQuery(this.query);
+
+  debug('Loader options: %s', util.inspect(options));
+
   options.dest = options.dest || '';
   options.filename = options.filename || this.resourcePath;
   options.Evaluator = CachedPathEvaluator;
+  options.precacheImportVariables = (options.precacheImportVariables || []).map(
+    function(importVariables) {
+      return typeof importVariables === 'string'
+        ? loaderUtils.parseQuery('?' + importVariables)
+        : importVariables;
+    }
+  );
 
   // Attach `importCache` to `options` so that the `Evaluator` can access it.
   var importCache = options.importCache = new ImportCache(this, options);
