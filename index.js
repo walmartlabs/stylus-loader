@@ -28,8 +28,16 @@ module.exports = function(source) {
   // Attach `importCache` to `options` so that the `Evaluator` can access it.
   var importCache = options.importCache = new ImportCache(this, options);
 
-  var configKey = options.config || 'stylus';
-  var stylusOptions = this.options[configKey] || {};
+  var configKey, stylusOptions;
+  if (this.stylus) {
+    configKey = options.config || 'default';
+    stylusOptions = this.stylus[configKey] || {};
+  } else if (this.options) {
+    configKey = options.config || 'stylus';
+    stylusOptions = this.options[configKey] || {};
+  } else {
+    stylusOptions = {};
+  }
 
   // Handle `use` ahead of time for Stylus, otherwise it will try to call
   // each plugin on every render attempt.
