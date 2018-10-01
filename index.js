@@ -1,7 +1,6 @@
 'use strict';
 var loaderUtils = require('loader-utils');
 var stylus = require('stylus');
-var path = require('path');
 var Promise = require('es6-promise').Promise;
 
 var CachedPathEvaluator = require('./lib/evaluator');
@@ -20,26 +19,35 @@ module.exports = function(source) {
     this.cacheable();
   }
   var done = this.async();
-  var options = loaderUtils.parseQuery(this.query);
+  var options = this.query ? loaderUtils.parseQuery(this.query) : {};
+
   options.dest = options.dest || '';
   options.filename = options.filename || this.resourcePath;
   options.Evaluator = CachedPathEvaluator;
-
   // Attach `importCache` to `options` so that the `Evaluator` can access it.
   var importCache = options.importCache = new ImportCache(this, options);
 
-  var configKey = options.config || 'stylus';
-  var stylusOptions = this.options[configKey] || {};
+  var configKey;
+  var stylusOptions;
+  if (this.stylus) {
+    configKey = options.config || 'default';
+    stylusOptions = this.stylus[configKey] || {};
+  } else if (this.options) {
+    configKey = options.config || 'stylus';
+    stylusOptions = this.options[configKey] || {};
+  } else {
+    stylusOptions = {};
+  }
 
-  // Handle `use` ahead of time for Stylus, otherwise it will try to call
-  // each plugin on every render attempt.
+  // Instead of assigning to options, we run them manually later so their side
+  // effects apply earlier for resolving paths.
   var use = needsArray(options.use || stylusOptions.use || []);
-
   options.use = [];
   options.import = options.import || stylusOptions.import || [];
   options.include = options.include || stylusOptions.include || [];
   options.set = options.set || stylusOptions.set || {};
   options.define = options.define || stylusOptions.define || {};
+  options.paths = options.paths || stylusOptions.paths;
 
   if (options.sourceMap != null) {
     options.sourcemap = options.sourceMap;
@@ -49,10 +57,8 @@ module.exports = function(source) {
   }
 
   var styl = stylus(source, options);
-  var paths = [path.dirname(options.filename)];
 
   if (options.paths && !Array.isArray(options.paths)) {
-    paths = paths.concat(options.paths);
     options.paths = [options.paths];
   }
 
